@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>댓글 필터링 서비스</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        body {
+            background-color: #f0f4f8;
+            padding: 40px 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: linear-gradient(145deg, #ffffff, #f8f9fa);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            padding: 30px;
+            transition: all 0.3s ease;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 32px;
+            position: relative;
+            padding-bottom: 15px;
+        }
+
+        h1:after {
+            content: '';
+            position: absolute;
+            width: 60px;
+            height: 4px;
+            background: linear-gradient(90deg, #6c5ce7, #00cec9);
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 2px;
+        }
+
+        .comment-form {
+            margin-bottom: 40px;
+            background-color: #ffffff;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            position: relative;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .comment-form:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .comment-form textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            resize: vertical;
+            min-height: 120px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            transition: border 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .comment-form textarea:focus {
+            outline: none;
+            border-color: #6c5ce7;
+            box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
+        }
+
+        .comment-form button {
+            background: linear-gradient(45deg, #6c5ce7, #00cec9);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            float: right;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .comment-form button:hover {
+            background: linear-gradient(45deg, #5649c0, #00b5b1);
+            box-shadow: 0 4px 10px rgba(108, 92, 231, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .comment-form button i {
+            margin-left: 8px;
+        }
+
+        .comments-list {
+            list-style: none;
+        }
+
+        .comment {
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+            transition: transform 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .comment:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .comment .comment-text {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #2d3436;
+            margin-bottom: 10px;
+            word-break: break-word;
+        }
+
+        .comment .comment-meta {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-top: 15px;
+        }
+
+        .comment .comment-meta i {
+            margin-right: 6px;
+            color: #95a5a6;
+        }
+
+        .comment .time {
+            margin-left: 10px;
+        }
+
+        .comment.filtered {
+            background-color: #f8f9ff;
+            border-left: 4px solid #6c5ce7;
+        }
+
+        .comment.filtered .comment-text {
+            color: #2c3e50;
+        }
+
+        .warning-label {
+            background-color: #fff3cd;
+            border-radius: 30px;
+            padding: 5px 15px;
+            font-size: 12px;
+            margin-left: auto;
+            color: #856404;
+            display: inline-flex;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .warning-label i {
+            margin-right: 5px;
+            color: #f39c12;
+        }
+
+        /* 위험도 레이블 스타일 */
+        .danger-level {
+            border-radius: 30px;
+            padding: 5px 15px;
+            font-size: 12px;
+            margin-left: 10px;
+            display: inline-flex;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .danger-level i {
+            margin-right: 5px;
+        }
+
+        .danger-level.low {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .danger-level.low i {
+            color: #28a745;
+        }
+
+        .danger-level.medium {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .danger-level.medium i {
+            color: #ffc107;
+        }
+
+        .danger-level.high {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .danger-level.high i {
+            color: #dc3545;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 25px;
+            display: none;
+        }
+
+        .loading p {
+            margin-top: 15px;
+            color: #6c5ce7;
+            font-weight: 500;
+        }
+
+        .loader {
+            display: inline-block;
+            position: relative;
+            width: 80px;
+            height: 20px;
+        }
+
+        .loader div {
+            position: absolute;
+            top: 0;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #6c5ce7, #00cec9);
+            animation-timing-function: cubic-bezier(0, 1, 1, 0);
+        }
+
+        .loader div:nth-child(1) {
+            left: 8px;
+            animation: loader1 0.6s infinite;
+        }
+
+        .loader div:nth-child(2) {
+            left: 8px;
+            animation: loader2 0.6s infinite;
+        }
+
+        .loader div:nth-child(3) {
+            left: 32px;
+            animation: loader2 0.6s infinite;
+        }
+
+        .loader div:nth-child(4) {
+            left: 56px;
+            animation: loader3 0.6s infinite;
+        }
+
+        @keyframes loader1 {
+            0% {
+                transform: scale(0);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        @keyframes loader3 {
+            0% {
+                transform: scale(1);
+            }
+            100% {
+                transform: scale(0);
+            }
+        }
+
+        @keyframes loader2 {
+            0% {
+                transform: translate(0, 0);
+            }
+            100% {
+                transform: translate(24px, 0);
+            }
+        }
+
+        .clear {
+            clear: both;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 10px;
+            }
+
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+
+            .comment-form {
+                padding: 20px;
+            }
+
+            .comment-form button {
+                padding: 12px 24px;
+                width: 100%;
+                margin-top: 10px;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>댓글 필터링 서비스</h1>
+
+    <div class="comment-form">
+        <textarea id="comment-input" placeholder="댓글을 입력하세요..."></textarea>
+        <button id="submit-comment">확인 <i class="fas fa-paper-plane"></i></button>
+        <div class="clear"></div>
+    </div>
+
+    <div class="loading" id="loading-indicator">
+        <div class="loader"><div></div><div></div><div></div><div></div></div>
+        <p>댓글 검토 중입니다...</p>
+    </div>
+
+    <ul class="comments-list" id="comments-list">
+        <!-- 댓글들이 여기에 추가됩니다 -->
+    </ul>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const commentInput = document.getElementById('comment-input');
+        const submitButton = document.getElementById('submit-comment');
+        const commentsList = document.getElementById('comments-list');
+        const loadingIndicator = document.getElementById('loading-indicator');
+
+        // 중복 제출 방지를 위한 플래그
+        let isSubmitting = false;
+
+        // 위험도 레벨에 따른 아이콘과 클래스 반환 함수
+        function getDangerLevelInfo(level) {
+            if (level === 0 || level <= 3) {
+                return { icon: 'fa-check-circle', class: 'low', text: '낮음' };
+            } else if (level <= 7) {
+                return { icon: 'fa-exclamation-circle', class: 'medium', text: '중간' };
+            } else {
+                return { icon: 'fa-exclamation-triangle', class: 'high', text: '높음' };
+            }
+        }
+
+        // 댓글 제출 함수
+        function submitComment() {
+            const commentText = commentInput.value.trim();
+
+            if (commentText === '') {
+                alert('댓글을 입력해주세요.');
+                loadingIndicator.style.display = 'none';
+                isSubmitting = false;
+                return;
+            }
+
+            // 이미 제출 중이면 중복 요청 방지
+            if (isSubmitting) {
+                return;
+            }
+
+            // 제출 중 상태로 설정
+            isSubmitting = true;
+
+            // 로딩 표시 보여주기
+            loadingIndicator.style.display = 'block';
+
+            // API 요청 보내기
+            fetch('/chat/input', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: commentText
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // 새 댓글 요소 생성
+                const newComment = document.createElement('li');
+                newComment.className = 'comment';
+
+                // 데이터에 clean_up_message가 있는지 확인
+                const displayText = data.clean_up_message || commentText;
+                const isFiltered = data.clean_up_message && data.clean_up_message !== commentText;
+
+                // 위험도 수준 (기본값 0)
+                const dangerLevel = data.danger_level || 0;
+                const dangerInfo = getDangerLevelInfo(dangerLevel);
+
+                if (isFiltered) {
+                    newComment.classList.add('filtered');
+                }
+
+                // 현재 시간 가져오기
+                const now = new Date();
+                const formattedTime = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+                // 댓글 내용 설정
+                newComment.innerHTML = `
+                    <div class="comment-text">${displayText}</div>
+                    <div class="comment-meta">
+                        <i class="fas fa-user-circle"></i> 사용자
+                        <span class="time"><i class="far fa-clock"></i> ${formattedTime}</span>
+                        <span class="danger-level ${dangerInfo.class}">
+                            <i class="fas ${dangerInfo.icon}"></i> 위험도: ${dangerInfo.text} (${dangerLevel}/10)
+                        </span>
+                        ${isFiltered ? '<span class="warning-label"><i class="fas fa-shield-alt"></i> 필터링됨</span>' : ''}
+                    </div>
+                `;
+
+                // 댓글 목록에 추가
+                commentsList.insertBefore(newComment, commentsList.firstChild);
+
+                // 입력창 비우기
+                commentInput.value = '';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('댓글 등록 중 오류가 발생했습니다.');
+            })
+            .finally(() => {
+                // 로딩 숨기기
+                loadingIndicator.style.display = 'none';
+                // 제출 완료 상태로 변경
+                isSubmitting = false;
+            });
+        }
+
+        // 버튼 클릭 이벤트 (단일 이벤트 핸들러)
+        submitButton.addEventListener('click', submitComment);
+
+        // 엔터 키 이벤트 - keypress 대신 keydown 사용하고 preventDefault 추가
+        commentInput.addEventListener('keydown', function(event) {
+            // 엔터키를 누르고 시프트키는 누르지 않은 경우
+            if (event.key === 'Enter' && !event.shiftKey) {
+                // 기본 동작 방지 (줄바꿈 방지)
+                event.preventDefault();
+                // 이미 제출 중이면 무시
+                if (!isSubmitting) {
+                    submitComment();
+                }
+            }
+        });
+    });
+</script>
+</body>
+</html>
